@@ -1,0 +1,262 @@
+
+<!DOCTYPE html>
+<html>
+    <head>
+      <meta charset='utf-8'>
+      <title> Lab 8 Option - Mapbox Isochrone API </title>
+      <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+      <!-- Import Mapbox GL JS  -->
+      <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v1.12.0/mapbox-gl.js'></script>
+      <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v1.12.0/mapbox-gl.css' rel='stylesheet' />
+      <!-- Import Assembly -->
+      <link href='https://api.mapbox.com/mapbox-assembly/v0.23.2/assembly.min.css' rel='stylesheet'>
+      <script src='https://api.mapbox.com/mapbox-assembly/v0.23.2/assembly.js'></script>
+      <!-- Import jQuery -->
+      <script src='https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js'></script>
+
+    <!-- This style section will make the map appear full screen -->
+      <style>
+        body {
+          margin: 0;
+          padding: 0;
+        }
+
+        #map {
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          width: 100%;
+        }
+      </style>
+    </head>
+
+    <body>
+      <!-- Create a container for the map -->
+      <div id='map'></div>
+
+    <!-- You will Insert the code specifying the time interval controls here!!!!!!! -->
+
+    <!--Create the Control toggles-->
+<div class='absolute fl my24 mx24 py24 px24 bg-gray-faint round'>
+  <form id='params'>
+    <h4 class='txt-m txt-bold mb6'>Choose a mode of travel:</h4> <!-- change the string here to edit the text on the control display -->
+<div class='mb12 mr12 toggle-group align-center'>
+  <label class='toggle-container'>
+    <input name='profile' type='radio' value='walking'>
+<div class='toggle toggle--active-null toggle--null'>Walking</div>
+  </label>
+
+  <label class='toggle-container'>
+    <input name='profile' type='radio' value='cycling'>
+      <div class='toggle toggle--active-null toggle--null'>Cycling</div>
+  </label>
+
+  <label class='toggle-container'>
+    <input name='profile' type='radio' value='driving' checked> <!-- the 'checked' included means that the driving profile will be selected when the map loads -->
+    <div class='toggle toggle--active-null toggle--null'>Driving</div>
+  </label>
+
+</div>
+<h4 class='txt-m txt-bold mb6'>Choose a maximum duration:</h4>  <!-- change the string here to edit the text on the control display -->
+<div class='mb12 mr12 toggle-group align-center'>
+  <label class='toggle-container'>
+    <input name='duration' type='radio' value='10'>  <!-- change the string here to edit the interval of time that will be queried -->
+    <div class='toggle toggle--active-null toggle--null'>10 min</div>  <!-- also make sure to update the label here to the correct time -->
+  </label>
+
+  <label class='toggle-container'>
+    <input name='duration' type='radio' value='30' checked> <!-- the 'checked' included means that the time duration of 30 minutes will be selected when the map loads -->
+    <div class='toggle toggle--active-null toggle--null'>30 min</div>
+  </label>
+
+  <label class='toggle-container'>
+    <input name='duration' type='radio' value='45'>
+    <div class='toggle toggle--active-null toggle--null'>45 min</div>
+    </label>
+
+<!-- Note that the intervals may be any whole minute interval but has a maximum of 60.
+The section from <label> to </Label> below specifies the time intervals, you may insert another label feature for a fourth interval, if desired, or edit the value to change the time queried, just be sure to change the label id to match   -->
+</form>
+
+</div>
+
+      <script>
+        mapboxgl.accessToken = 'pk.eyJ1IjoiZWp1YXJlemxvcGV6IiwiYSI6ImNrZWRnMWRzaDA1YTAzMW5zMTV2ZTNvb2QifQ.wTVh9zCK39_mfbC3g60GUA'; // Add your Mapbox access token
+        var map = new mapboxgl.Map({ //more about Mapbox GL here https://docs.mapbox.com/mapbox-gl-js/api/
+          container: 'map', // Specify the container ID
+          style: 'mapbox://styles/mapbox/streets-v11', // Specify which map style to use, this is the basic mapbox street layer, but can be changed to a custom style if created in the mapbox studio this can be changed
+          center: [-87.73966, 42.03819], // Specify the starting position, NEIU here
+          zoom: 10, // Specify the starting zoom
+        });
+
+        // Insert the variable for the ISO here!!!
+
+        // Create variables to use in getIso()
+           //Specify the lat/long of the point that you wish to map distances from. Here we are using NEIU. The profile and minutes specify the default selections that will be selected upon loading.
+           // the profile and minutes here should match what is 'checked' in the code above when the toggle options are set
+          var urlBase = 'https://api.mapbox.com/isochrone/v1/mapbox/';
+          var lon = -87.71288;
+          var lat = 41.91813;
+          var profile = 'driving';
+          var minutes = 30;
+
+          // Create a function that sets up the Isochrone API query then makes an Ajax call
+          // This API receives a query in the form of a single string of parameters. This function allows the webpage to compile the string based on the selections made in the control toggle, this will also set the isochrones
+          // to display polygons instead of just lines
+          function getIso() {
+            var query = urlBase + profile + '/' + lon + ',' + lat + '?contours_minutes=' + minutes + '&polygons=true&access_token=' + mapboxgl.accessToken;
+
+            $.ajax({
+              method: 'GET',
+              url: query
+            }).done(function(data) {
+              // Set the 'iso' source's data to what's returned by the API query
+              map.getSource('iso').setData(data);
+            })
+          };
+
+          //You  will insert a point marker here!!!!!!!
+
+          //NEIU Marker, which will define the variable and color, notice that the location is a separate variable and the two will be combined later.
+  var marker = new mapboxgl.Marker({
+   'color': '#228b22' //change this to edit the pin marker
+  });
+
+  // Create a LngLat object to use in the marker initialization
+  // https://docs.mapbox.com/mapbox-gl-js/api/#lnglat
+  var lngLat = {
+   lon: lon,
+   lat: lat
+  };
+
+          map.on('load', function() {
+           // When the map loads, add the source and layer
+           map.addSource('iso', {
+             type: 'geojson',
+             data: {
+               'type': 'FeatureCollection',
+               'features': []
+             }
+           });
+
+           map.addLayer({
+             'id': 'isoLayer',
+             'type': 'fill',
+             // Use "iso" as the data source for this layer
+             'source': 'iso',
+             'layout': {},
+             'paint': {
+               // The fill color for the layer is set to a light grey, edit the code below to change the color of the isochrone polygons
+               'fill-color': '#228b22',
+               'fill-opacity': 0.3
+             }
+           }, "poi-label");
+
+          //You will use the marker coordinates specified above when making the API call, insert that portion Here!!!!!!!!!!!
+
+
+
+          // Initialize the marker at the query coordinates
+            marker.setLngLat(lngLat).addTo(map);
+            
+
+           // Make the API call
+           getIso();
+          });
+
+          // Target the "params" form in the HTML portion of your code
+          var params = document.getElementById('params');
+
+          // When a user changes the value of travel mode or time duration by clicking a button, change the parameter's value and make the API query again
+          params.addEventListener('change', function(e) {
+            if (e.target.name === 'profile') {
+              profile = e.target.value;
+              getIso();
+            } else if (e.target.name === 'duration') {
+              minutes = e.target.value;
+              getIso();
+            }
+          });
+
+
+
+          //---------------------------------------First API Inquery Above, 2nd below------------------------------------------------------------------
+              //Reusing base from above
+             var lon2 = -87.78969; //the same function as above, just with 2 added to the end of the variable names to make them unique
+             var lat2 = 42.14896; //the same function as above, just with 2 added to the end of the variable names to make them unique
+             //reusing travel profile from and time from above since they will match
+
+
+           function getIso2() {
+             var query2 = urlBase + profile + '/' + lon2 + ',' + lat2 + '?contours_minutes=' + minutes + '&polygons=true&access_token=' + mapboxgl.accessToken; //same as above just with 2 added to the end of the second point variables to make them unique
+
+
+               $.ajax({
+                 method: 'GET',
+                 url: query2
+               }).done(function(data) {
+                 // Set the 'iso' source's data to what's returned by the API query
+                 map.getSource('iso2').setData(data); //updated to iso2
+               })
+             };
+
+             var marker2 = new mapboxgl.Marker({ //a second marker to denote the additional point
+              'color': '#9acd32' //change this to edit the pin marker
+             });
+
+             var lngLat2 = {
+              lon: lon2,
+              lat: lat2
+             };
+
+              map.on('load', function() {
+               // When the map loads, add the source and layer
+               map.addSource('iso2', {
+                 type: 'geojson',
+                 data: {
+                   'type': 'FeatureCollection',
+                   'features': []
+                 }
+               });
+
+               map.addLayer({
+                 'id': 'isoLayer2',
+                 'type': 'fill',
+                 // Use "iso" as the data source for this layer
+                 'source': 'iso2',
+                 'layout': {},
+                 'paint': {
+                   // The fill color for the layer is set to a light purple, edit to change the color of the isochrone polygon
+                   'fill-color': '#ffff00',
+                   'fill-opacity': 0.3
+                 }
+               }, "poi-label");
+
+               // Initialize the marker at the query coordinates
+              marker2.setLngLat(lngLat2).addTo(map);
+
+
+               // Make the API call
+               getIso2();
+              });
+
+
+
+
+              //Able to Reuse the Params variable from before since it just deals with the toggles. This portion does have to be added to the second, getiso2, function to update it as well
+              params.addEventListener('change', function(e) {
+                if (e.target.name === 'profile') {
+                  profile = e.target.value;
+                  getIso2();
+                } else if (e.target.name === 'duration') {
+                  minutes = e.target.value;
+                  getIso2();
+                }
+              });
+
+      </script>
+
+
+    </body>
+
+</html>
